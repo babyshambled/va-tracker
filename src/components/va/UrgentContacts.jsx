@@ -25,7 +25,24 @@ export default function UrgentContacts({ userId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.linkedin_url.trim()) return
+
+    // Debug logging
+    console.log('🎯 Form submission attempt:', {
+      name: formData.name,
+      nameLength: formData.name.trim().length,
+      url: formData.linkedin_url,
+      urlLength: formData.linkedin_url.trim().length,
+      notes: formData.notes,
+      notesLength: formData.notes.trim().length,
+      priority: formData.priority,
+      imageCount: images.length
+    })
+
+    if (!formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim()) {
+      console.error('❌ Validation failed - missing required fields')
+      alert('⚠️ Please fill in all required fields:\n- Contact Name\n- LinkedIn URL\n- Context & Notes')
+      return
+    }
 
     setSubmitting(true)
     setUploadingImages(true)
@@ -60,11 +77,16 @@ export default function UrgentContacts({ userId }) {
         setImages([])
         setShowModal(false)
         alert('✅ Contact added! Your boss has been notified.')
+        console.log('✅ Contact added successfully')
       } else {
         alert('Error adding contact: ' + result.error)
+        console.error('❌ Error adding contact:', result.error)
       }
     } catch (error) {
       alert('Error: ' + error.message)
+      console.error('❌ Exception during submission:', error)
+      // Clean up previews on error too
+      images.forEach(img => URL.revokeObjectURL(img.preview))
     } finally {
       setSubmitting(false)
       setUploadingImages(false)
@@ -305,6 +327,12 @@ export default function UrgentContacts({ userId }) {
                   required
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 transition"
                 />
+                {formData.name && !formData.name.trim() && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Name cannot be empty or just spaces</span>
+                  </p>
+                )}
               </div>
 
               <div>
@@ -319,6 +347,12 @@ export default function UrgentContacts({ userId }) {
                   required
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 transition"
                 />
+                {formData.linkedin_url && !formData.linkedin_url.trim() && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>LinkedIn URL cannot be empty or just spaces</span>
+                  </p>
+                )}
               </div>
 
               {/* Image Upload/Paste Zone */}
@@ -384,7 +418,23 @@ export default function UrgentContacts({ userId }) {
                   rows="4"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 transition resize-none"
                 />
+                {formData.notes && !formData.notes.trim() && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Notes cannot be empty or just spaces</span>
+                  </p>
+                )}
               </div>
+
+              {/* Form validation summary */}
+              {!submitting && !uploadingImages && (!formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim()) && (
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3">
+                  <p className="text-sm text-yellow-800 font-medium flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>Please fill in all required fields to continue</span>
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -403,9 +453,32 @@ export default function UrgentContacts({ userId }) {
                 <button
                   type="submit"
                   disabled={submitting || !formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim()}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                  className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${
+                    submitting || !formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim()
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 hover:shadow-lg'
+                  }`}
+                  title={
+                    !formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim()
+                      ? 'Please fill in all required fields'
+                      : 'Add contact and notify your boss'
+                  }
                 >
-                  {uploadingImages ? 'Uploading Images...' : submitting ? 'Adding...' : 'Add & Notify Boss'}
+                  {uploadingImages ? (
+                    <>
+                      <span className="inline-block animate-spin mr-2">⏳</span>
+                      Uploading {images.length} image{images.length !== 1 ? 's' : ''}...
+                    </>
+                  ) : submitting ? (
+                    <>
+                      <span className="inline-block animate-spin mr-2">⏳</span>
+                      Adding...
+                    </>
+                  ) : !formData.name.trim() || !formData.linkedin_url.trim() || !formData.notes.trim() ? (
+                    '⚠️ Fill Required Fields'
+                  ) : (
+                    'Add & Notify Boss'
+                  )}
                 </button>
               </div>
             </form>

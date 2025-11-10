@@ -13,6 +13,7 @@ export default function BossDashboard({ user, profile }) {
 
   // Auto-refresh every 10 seconds to get latest VA activity (only if VAs exist)
   // Uses silentRefresh to avoid flashing the screen
+  // silentRefresh is stable (useCallback) so this won't cause re-renders
   useEffect(() => {
     if (vas.length === 0) return // Don't refresh if no VAs yet
 

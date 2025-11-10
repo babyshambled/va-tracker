@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export function useTeam(bossId) {
@@ -8,9 +8,9 @@ export function useTeam(bossId) {
   useEffect(() => {
     if (!bossId) return
     fetchVAs()
-  }, [bossId])
+  }, [bossId, fetchVAs])
 
-  async function fetchVAs(silent = false) {
+  const fetchVAs = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true)
 
@@ -60,12 +60,13 @@ export function useTeam(bossId) {
     } finally {
       if (!silent) setLoading(false)
     }
-  }
+  }, [bossId])
 
   // Silent refresh function for auto-refresh (no loading state)
-  async function silentRefresh() {
+  // Stable function reference that won't cause useEffect to re-run
+  const silentRefresh = useCallback(async () => {
     await fetchVAs(true)
-  }
+  }, [fetchVAs])
 
   async function inviteVA(vaData) {
     try {
