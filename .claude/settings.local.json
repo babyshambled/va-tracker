@@ -31,7 +31,9 @@
       "Bash(powershell -Command \"Get-Process node | Select-Object Id,ProcessName,StartTime,Path | Format-Table\")",
       "Bash(powershell:*)",
       "Bash(npx supabase:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
