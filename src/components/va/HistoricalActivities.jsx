@@ -6,6 +6,8 @@ export default function HistoricalActivities({ userId }) {
   const { activities, loading: listLoading, refresh } = useHistoricalActivities(userId, 30)
   const [selectedDate, setSelectedDate] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [newDate, setNewDate] = useState('')
   const [editValues, setEditValues] = useState({
     dms_sent: 0,
     connections_sent: 0,
@@ -46,17 +48,20 @@ export default function HistoricalActivities({ userId }) {
   }
 
   const handleAddNewDate = () => {
-    const dateInput = document.createElement('input')
-    dateInput.type = 'date'
-    dateInput.max = new Date().toISOString().split('T')[0] // Can't add future dates
+    console.log('🔍 Opening date picker modal')
+    setNewDate(new Date().toISOString().split('T')[0]) // Default to today
+    setShowDatePicker(true)
+  }
 
-    dateInput.addEventListener('change', (e) => {
-      if (e.target.value) {
-        handleEditClick(e.target.value)
-      }
-    })
+  const handleDateSubmit = () => {
+    if (!newDate) {
+      alert('⚠️ Please select a date')
+      return
+    }
 
-    dateInput.click()
+    console.log('✅ Date selected:', newDate)
+    setShowDatePicker(false)
+    handleEditClick(newDate)
   }
 
   if (listLoading) {
@@ -240,6 +245,60 @@ export default function HistoricalActivities({ userId }) {
             <p className="text-xs text-gray-500 text-center mt-4">
               💡 Changes will be reflected in your activity history immediately
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Date Picker Modal */}
+      {showDatePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6 z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="text-5xl mb-4">📅</div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Add Past Date Activity</h3>
+              <p className="text-gray-600">
+                Select a date to log past activity
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select Date
+                </label>
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition text-lg font-semibold"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 You can only add activities for past or current dates
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDatePicker(false)
+                    setNewDate('')
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDateSubmit}
+                  disabled={!newDate}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
