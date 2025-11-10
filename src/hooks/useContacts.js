@@ -1,64 +1,101 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export function useContacts(userId, bossId = null) {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
-    if (userId || bossId) {
-      fetchContacts()
+    if (!userId && !bossId) {
+      console.log('⚠️ useContacts: No userId or bossId provided')
+      return
     }
-  }, [userId, bossId])
 
-  async function fetchContacts() {
-    try {
-      setLoading(true)
+    console.log('🔍 useContacts: Starting fetch with', { userId, bossId })
 
-      // If bossId is provided, fetch contacts from all VAs in the team
-      let query = supabase
-        .from('contacts')
-        .select(`
-          *,
-          va:user_id (
-            id,
-            full_name
-          )
-        `)
-        .order('created_at', { ascending: false })
+    async function fetchContacts() {
+      try {
+        setLoading(true)
 
-      if (bossId) {
-        // Fetch contacts from all VAs in this boss's team
-        const { data: teamVAs } = await supabase
-          .from('team_relationships')
-          .select('va_id')
-          .eq('boss_id', bossId)
-          .eq('status', 'active')
+        // If bossId is provided, fetch contacts from all VAs in the team
+        let query = supabase
+          .from('contacts')
+          .select(`
+            *,
+            va:user_id (
+              id,
+              full_name
+            )
+          `)
+          .order('created_at', { ascending: false })
 
-        if (teamVAs && teamVAs.length > 0) {
-          const vaIds = teamVAs.map(t => t.va_id)
-          query = query.in('user_id', vaIds)
+        if (bossId) {
+          console.log('🔍 Fetching contacts for BOSS ID:', bossId)
+
+          // Fetch contacts from all VAs in this boss's team
+          const { data: teamVAs, error: teamError } = await supabase
+            .from('team_relationships')
+            .select('va_id')
+            .eq('boss_id', bossId)
+            .eq('status', 'active')
+
+          console.log('🔍 Team query result:', { teamVAs, teamError })
+
+          if (teamError) {
+            console.error('❌ Team relationships query failed:', teamError)
+            throw teamError
+          }
+
+          if (teamVAs && teamVAs.length > 0) {
+            const vaIds = teamVAs.map(t => t.va_id)
+            console.log('✅ Found', teamVAs.length, 'active VAs with IDs:', vaIds)
+            query = query.in('user_id', vaIds)
+          } else {
+            console.warn('⚠️ No active VAs found for boss:', bossId)
+            setContacts([])
+            setLoading(false)
+            return
+          }
         } else {
-          // No VAs, return empty
-          setContacts([])
-          setLoading(false)
-          return
+          console.log('🔍 Fetching contacts for USER ID:', userId)
+          // Fetch only this user's contacts
+          query = query.eq('user_id', userId)
         }
-      } else {
-        // Fetch only this user's contacts
-        query = query.eq('user_id', userId)
+
+        console.log('🔍 Executing contacts query...')
+        const { data, error } = await query
+
+        if (error) {
+          console.error('❌ Contacts query failed:', error)
+          throw error
+        }
+
+        console.log('✅ Contacts query SUCCESS! Found', data?.length || 0, 'contacts')
+        console.log('📋 Contact data:', data)
+
+        setContacts(data || [])
+      } catch (err) {
+        console.error('❌ CRITICAL ERROR in fetchContacts:', err)
+        console.error('❌ Error details:', {
+          message: err.message,
+          code: err.code,
+          details: err.details,
+          hint: err.hint
+        })
+      } finally {
+        setLoading(false)
+        console.log('🏁 useContacts: Fetch completed')
       }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setContacts(data || [])
-    } catch (err) {
-      console.error('Error fetching contacts:', err)
-    } finally {
-      setLoading(false)
     }
-  }
+
+    fetchContacts()
+  }, [userId, bossId, refreshTrigger])
+
+  const refresh = useCallback(() => {
+    console.log('🔄 Manual refresh triggered')
+    setRefreshTrigger(prev => prev + 1)
+  }, [])
 
   async function addContact(contactData) {
     try {
@@ -201,7 +238,7 @@ export function useContacts(userId, bossId = null) {
         }
       }
 
-      await fetchContacts()
+      refresh()
       return { success: true, data }
     } catch (error) {
       console.error('Error adding contact:', error)
@@ -219,7 +256,7 @@ export function useContacts(userId, bossId = null) {
 
       if (error) throw error
 
-      await fetchContacts()
+      refresh()
       return { success: true }
     } catch (error) {
       console.error('Error removing contact:', error)
@@ -232,6 +269,6 @@ export function useContacts(userId, bossId = null) {
     loading,
     addContact,
     removeContact,
-    refresh: fetchContacts
+    refresh
   }
 }
