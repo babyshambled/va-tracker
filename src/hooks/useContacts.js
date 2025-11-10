@@ -6,10 +6,10 @@ export function useContacts(userId, bossId = null) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (userId) {
+    if (userId || bossId) {
       fetchContacts()
     }
-  }, [userId])
+  }, [userId, bossId])
 
   async function fetchContacts() {
     try {
