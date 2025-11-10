@@ -12,13 +12,16 @@ serve(async (req) => {
   }
 
   try {
-    const { webhookUrl, message, blocks } = await req.json()
+    const { webhookUrl: providedUrl, message, blocks } = await req.json()
+
+    // Use provided webhookUrl or fall back to environment variable
+    const webhookUrl = providedUrl || Deno.env.get('SLACK_WEBHOOK_URL')
 
     if (!webhookUrl) {
-      throw new Error('Webhook URL is required')
+      throw new Error('Webhook URL is required (either in request or SLACK_WEBHOOK_URL env var)')
     }
 
-    console.log('Sending Slack notification to:', webhookUrl)
+    console.log('Sending Slack notification to:', webhookUrl.substring(0, 50) + '...')
 
     // Send notification to Slack
     const slackPayload = blocks ? { blocks } : { text: message }

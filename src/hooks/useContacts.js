@@ -117,10 +117,87 @@ export function useContacts(userId, bossId = null) {
               imageUrls: contactData.image_urls || []
             }
           })
-          console.log('✅ Boss notified about urgent contact')
+          console.log('✅ Boss notified about urgent contact via email')
         } catch (emailErr) {
           console.error('Email notification failed:', emailErr)
           // Don't fail the whole operation if email fails
+        }
+
+        // Send Slack notification
+        try {
+          const priorityEmoji = {
+            urgent: '🔥',
+            high: '⚡',
+            medium: '⭐'
+          }
+          const emoji = priorityEmoji[contactData.priority] || '🔥'
+
+          await supabase.functions.invoke('send-slack-notification', {
+            body: {
+              webhookUrl: null, // Will be set via Supabase secret SLACK_WEBHOOK_URL
+              blocks: [
+                {
+                  type: 'header',
+                  text: {
+                    type: 'plain_text',
+                    text: `${emoji} ${contactData.priority?.toUpperCase() || 'URGENT'} Priority Contact Flagged`
+                  }
+                },
+                {
+                  type: 'section',
+                  fields: [
+                    {
+                      type: 'mrkdwn',
+                      text: `*Contact:*\n${contactData.name}`
+                    },
+                    {
+                      type: 'mrkdwn',
+                      text: `*Flagged by:*\n${vaProfile?.full_name || 'VA'}`
+                    }
+                  ]
+                },
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `*LinkedIn:*\n<${contactData.linkedin_url}|View Profile>`
+                  }
+                },
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `*Context & Notes:*\n${contactData.notes}`
+                  }
+                },
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: `*Screenshots:* ${contactData.image_urls?.length || 0} attached`
+                  }
+                },
+                {
+                  type: 'actions',
+                  elements: [
+                    {
+                      type: 'button',
+                      text: {
+                        type: 'plain_text',
+                        text: 'View LinkedIn Profile'
+                      },
+                      url: contactData.linkedin_url,
+                      style: 'primary'
+                    }
+                  ]
+                }
+              ]
+            }
+          })
+          console.log('✅ Boss notified about urgent contact via Slack')
+        } catch (slackErr) {
+          console.error('Slack notification failed:', slackErr)
+          // Don't fail the whole operation if Slack fails
         }
       }
 
