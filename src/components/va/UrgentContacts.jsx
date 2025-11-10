@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useContacts } from '../../hooks/useContacts'
 import { uploadContactImage, getImagesFromPasteEvent, deleteContactImage } from '../../lib/imageUpload'
+import { useFormPersist } from '../../hooks/useFormPersist'
 
 const PRIORITY_LEVELS = [
   { value: 'urgent', label: 'Urgent', emoji: '🔥', color: 'red', description: 'Critical - needs immediate attention' },
@@ -29,6 +30,13 @@ export default function UrgentContacts({ userId }) {
   const [uploadingImages, setUploadingImages] = useState(false)
   const fileInputRef = useRef(null)
   const pasteZoneRef = useRef(null)
+
+  // Auto-save form data to prevent loss on tab switch
+  const { clearPersistedData, hasSavedDraft } = useFormPersist(
+    `urgent-contact-form-${userId}`,
+    formData,
+    setFormData
+  )
 
   // Log form validation state whenever it changes
   useEffect(() => {
@@ -100,6 +108,10 @@ export default function UrgentContacts({ userId }) {
         images.forEach(img => URL.revokeObjectURL(img.preview))
         setFormData({ name: '', linkedin_url: '', notes: '', priority: 'urgent' })
         setImages([])
+
+        // Clear persisted form data after successful submission
+        clearPersistedData()
+
         setShowModal(false)
         alert('✅ Contact added! Your boss has been notified.')
         console.log('✅ Contact added successfully')
@@ -318,6 +330,33 @@ export default function UrgentContacts({ userId }) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Draft Restored Banner */}
+              {hasSavedDraft && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">💾</span>
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Draft restored from auto-save
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Your form data was automatically saved and has been restored
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPersistedData()
+                      setFormData({ name: '', linkedin_url: '', notes: '', priority: 'urgent' })
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-semibold underline"
+                  >
+                    Clear Draft
+                  </button>
+                </div>
+              )}
+
               {/* Priority Selection */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -469,7 +508,8 @@ export default function UrgentContacts({ userId }) {
                   type="button"
                   onClick={() => {
                     setShowModal(false)
-                    setFormData({ name: '', linkedin_url: '', notes: '', priority: 'urgent' })
+                    // Note: We DON'T clear persisted data on cancel - user might want to come back to it
+                    // Only clear when they explicitly clear the draft or successfully submit
                     images.forEach(img => URL.revokeObjectURL(img.preview))
                     setImages([])
                   }}
