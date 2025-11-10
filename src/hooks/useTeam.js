@@ -5,11 +5,6 @@ export function useTeam(bossId) {
   const [vas, setVas] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!bossId) return
-    fetchVAs()
-  }, [bossId, fetchVAs])
-
   const fetchVAs = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true)
@@ -67,6 +62,12 @@ export function useTeam(bossId) {
   const silentRefresh = useCallback(async () => {
     await fetchVAs(true)
   }, [fetchVAs])
+
+  // Fetch VAs on mount and when bossId changes
+  useEffect(() => {
+    if (!bossId) return
+    fetchVAs()
+  }, [bossId, fetchVAs])
 
   async function inviteVA(vaData) {
     try {
