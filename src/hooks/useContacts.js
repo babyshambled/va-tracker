@@ -31,7 +31,8 @@ export function useContacts(userId, bossId = null) {
           .order('created_at', { ascending: false })
 
         if (bossId) {
-          console.log('🔍 Fetching contacts for BOSS ID:', bossId)
+          console.log('🔍 BOSS MODE: Fetching contacts for BOSS ID:', bossId)
+          console.log('🔍 BOSS MODE: First, finding all VAs in boss\'s team...')
 
           // Fetch contacts from all VAs in this boss's team
           const { data: teamVAs, error: teamError } = await supabase
@@ -40,19 +41,31 @@ export function useContacts(userId, bossId = null) {
             .eq('boss_id', bossId)
             .eq('status', 'active')
 
-          console.log('🔍 Team query result:', { teamVAs, teamError })
+          console.log('🔍 BOSS MODE: Team query completed')
+          console.log('🔍 BOSS MODE: Team query result:', { teamVAs, teamError })
+          console.log('🔍 BOSS MODE: Number of VAs found:', teamVAs?.length || 0)
 
           if (teamError) {
-            console.error('❌ Team relationships query failed:', teamError)
+            console.error('❌ BOSS MODE: Team relationships query failed:', teamError)
+            console.error('❌ BOSS MODE: Error details:', {
+              message: teamError.message,
+              code: teamError.code,
+              details: teamError.details,
+              hint: teamError.hint
+            })
             throw teamError
           }
 
           if (teamVAs && teamVAs.length > 0) {
             const vaIds = teamVAs.map(t => t.va_id)
-            console.log('✅ Found', teamVAs.length, 'active VAs with IDs:', vaIds)
+            console.log('✅ BOSS MODE: Found', teamVAs.length, 'active VAs')
+            console.log('✅ BOSS MODE: VA IDs:', vaIds)
+            console.log('🔍 BOSS MODE: Now fetching contacts for these VA IDs...')
             query = query.in('user_id', vaIds)
           } else {
-            console.warn('⚠️ No active VAs found for boss:', bossId)
+            console.warn('⚠️ BOSS MODE: No active VAs found for boss:', bossId)
+            console.warn('⚠️ BOSS MODE: This means boss has no team members yet!')
+            console.warn('⚠️ BOSS MODE: Boss needs to invite VAs first')
             setContacts([])
             setLoading(false)
             return
@@ -71,8 +84,20 @@ export function useContacts(userId, bossId = null) {
           throw error
         }
 
-        console.log('✅ Contacts query SUCCESS! Found', data?.length || 0, 'contacts')
-        console.log('📋 Contact data:', data)
+        if (bossId) {
+          console.log('✅ BOSS MODE: Contacts query SUCCESS!')
+          console.log('✅ BOSS MODE: Found', data?.length || 0, 'contacts from VAs')
+          console.log('📋 BOSS MODE: Contact data:', data)
+          if (data && data.length > 0) {
+            console.log('📋 BOSS MODE: Contacts by VA:')
+            data.forEach(contact => {
+              console.log(`  - ${contact.name} (${contact.priority}) by VA: ${contact.va?.full_name || 'Unknown'}`)
+            })
+          }
+        } else {
+          console.log('✅ Contacts query SUCCESS! Found', data?.length || 0, 'contacts')
+          console.log('📋 Contact data:', data)
+        }
 
         setContacts(data || [])
       } catch (err) {
@@ -127,14 +152,7 @@ export function useContacts(userId, bossId = null) {
       // Get boss info
       const { data: teamRel } = await supabase
         .from('team_relationships')
-        .select(`
-          boss_id,
-          boss:boss_id (
-            id,
-            full_name,
-            email
-          )
-        `)
+        .select('boss_id, boss:boss_id(id, full_name, email)')
         .eq('va_id', userId)
         .eq('status', 'active')
         .single()
