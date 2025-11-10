@@ -33,7 +33,9 @@
       "Bash(npx supabase:*)",
       "Bash(npm run build:*)",
       "Bash(git fetch:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(nul)",
+      "Bash(.gitignore)"
     ],
     "deny": [],
     "ask": []
