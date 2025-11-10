@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export function useActivities(userId) {
@@ -6,13 +6,9 @@ export function useActivities(userId) {
   const [loading, setLoading] = useState(true)
   const [goals, setGoals] = useState({ dms: 20, connections: 20 })
 
-  useEffect(() => {
+  const fetchTodayActivity = useCallback(async () => {
     if (!userId) return
-    fetchTodayActivity()
-    fetchGoals()
-  }, [userId])
 
-  async function fetchTodayActivity() {
     try {
       setLoading(true)
       const today = new Date().toISOString().split('T')[0]
@@ -52,9 +48,11 @@ export function useActivities(userId) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId])
 
-  async function fetchGoals() {
+  const fetchGoals = useCallback(async () => {
+    if (!userId) return
+
     try {
       const { data, error } = await supabase
         .from('user_goals')
@@ -74,7 +72,13 @@ export function useActivities(userId) {
     } catch (err) {
       console.error('Error fetching goals:', err)
     }
-  }
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) return
+    fetchTodayActivity()
+    fetchGoals()
+  }, [userId, fetchTodayActivity, fetchGoals])
 
   async function incrementDMs() {
     if (!todayActivity) return
