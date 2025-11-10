@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useContacts } from '../../hooks/useContacts'
 import { uploadContactImage, getImagesFromPasteEvent, deleteContactImage } from '../../lib/imageUpload'
 
@@ -9,8 +9,15 @@ const PRIORITY_LEVELS = [
 ]
 
 export default function UrgentContacts({ userId }) {
+  console.log('🎯 UrgentContacts: Component mounted/updated with userId:', userId)
+
   const { contacts, loading, addContact, removeContact } = useContacts(userId)
   const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => {
+    console.log('🎯 UrgentContacts: Modal state changed to:', showModal)
+  }, [showModal])
+
   const [formData, setFormData] = useState({
     name: '',
     linkedin_url: '',
@@ -23,8 +30,26 @@ export default function UrgentContacts({ userId }) {
   const fileInputRef = useRef(null)
   const pasteZoneRef = useRef(null)
 
+  // Log form validation state whenever it changes
+  useEffect(() => {
+    const isValid = formData.name.trim() && formData.linkedin_url.trim() && formData.notes.trim()
+    console.log('🎯 Form validation state:', {
+      name: formData.name.trim() ? '✅' : '❌ EMPTY',
+      nameValue: formData.name,
+      url: formData.linkedin_url.trim() ? '✅' : '❌ EMPTY',
+      urlValue: formData.linkedin_url,
+      notes: formData.notes.trim() ? '✅' : '❌ EMPTY',
+      notesLength: formData.notes.length,
+      priority: formData.priority,
+      imageCount: images.length,
+      isFormValid: isValid,
+      buttonWillBeDisabled: !isValid || submitting
+    })
+  }, [formData, images, submitting])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('🚀 handleSubmit CALLED! Form is being submitted!')
 
     // Debug logging
     console.log('🎯 Form submission attempt:', {
@@ -176,7 +201,10 @@ export default function UrgentContacts({ userId }) {
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            console.log('🎯 "+ Add Contact" button clicked - opening modal')
+            setShowModal(true)
+          }}
           className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
         >
           + Add Contact
